@@ -7,7 +7,7 @@ with open('CHANGELOG.rst') as f:
 
 setup(
     name='devpi-builder',
-    use_scm_version=True,
+    version='4.0.0-rc.1',
     packages=find_packages(exclude=['tests']),
     author='Matthias Bach',
     author_email='matthias.bach@blue-yonder.com',
