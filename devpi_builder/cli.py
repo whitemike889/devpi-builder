@@ -13,6 +13,7 @@ import os
 
 from junit_xml import TestSuite, TestCase
 from devpi_plumber.client import DevpiClient
+import requests
 
 from devpi_builder import requirements, wheeler
 
@@ -57,6 +58,18 @@ class Processor(object):
         self._results.append(log_entry)
 
     def _should_package_be_build(self, package, version):
+        name = "%s-%s" % (package.replace('-', '_'), version)
+
+        if self._blacklist and requirements.matched_by_list(package, version, self._blacklist):
+            self._log_skip('Skipping %s %s as it is matched by the blacklist.', package, version)
+            return False
+
+        package_index = "%s/simple/%s" % (os.environ['LOCAL_REPO_URL'], package)
+        res = requests.get(package_index)
+        if name in res.text:
+            self._log_skip('Skipping %s %s as is already available on the index.', package, version)
+            return False
+
         return True
 
     def _upload_package(self, package, version, wheel_file):
