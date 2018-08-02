@@ -57,26 +57,12 @@ class Processor(object):
         self._results.append(log_entry)
 
     def _should_package_be_build(self, package, version):
-        spec = "{}=={}".format(package, version)
-
-        if self._blacklist and requirements.matched_by_list(package, version, self._blacklist):
-            self._log_skip('Skipping %s %s as it is matched by the blacklist.', package, version)
-            return False
-        elif wheeler.has_compatible_wheel(self._devpi_client.list(spec)):
-            self._log_skip('Skipping %s %s as is already available on the index.', package, version)
-            return False
-        elif self._pure_index_client and wheeler.has_compatible_wheel(self._pure_index_client.list(spec)):
-            self._log_skip('Skipping %s %s as is already available on the pure index.', package, version)
-            return False
         return True
 
     def _upload_package(self, package, version, wheel_file):
-        if self._pure_index_client and wheeler.is_pure(wheel_file):
-            logger.debug('Uploading %s %s to pure index %s', package, version, self._pure_index_client.url)
-            self._pure_index_client.upload(wheel_file, dry_run=self._dry_run)
-        else:
-            logger.debug('Uploading %s %s to %s', package, version, self._devpi_client.url)
-            self._devpi_client.upload(wheel_file, dry_run=self._dry_run)
+        import subprocess
+        logger.debug('Uploading %s %s to %s', package, version)
+        subprocess.check_call(['twine', 'upload', wheel_file])
 
     def build_packages(self, packages):
         self._results = []
@@ -136,14 +122,13 @@ def main(args=None):
             args.password = getpass.getpass('Password: ')
 
     packages = requirements.read_exact_versions(args.requirements)
-    with wheeler.Builder() as builder, DevpiClient(args.index, args.user, args.password,
-                                                   client_cert=args.client_cert) as devpi_client:
+    devpi_client = None
+    with wheeler.Builder() as builder:
         if args.pure_index:
-            with DevpiClient(args.pure_index, args.user, args.password,
-                             client_cert=args.client_cert) as pure_index_client:
-                processor = Processor(builder, devpi_client, args.blacklist, pure_index_client,
-                                      junit_xml=args.junit_xml, dry_run=args.dry_run, run_id=args.run_id)
-                processor.build_packages(packages)
+            pure_index_client = None
+            processor = Processor(builder, devpi_client, args.blacklist, pure_index_client,
+                                  junit_xml=args.junit_xml, dry_run=args.dry_run, run_id=args.run_id)
+            processor.build_packages(packages)
         else:
             processor = Processor(builder, devpi_client, args.blacklist, junit_xml=args.junit_xml, dry_run=args.dry_run,
                                   run_id=args.run_id)

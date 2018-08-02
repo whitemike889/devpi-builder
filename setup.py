@@ -20,7 +20,8 @@ setup(
         'setuptools',
         'wheel',
         'pip>=1.5.3',
-        'junit-xml'
+        'junit-xml',
+        'twine',
     ],
     setup_requires=[
         'setuptools_scm',
